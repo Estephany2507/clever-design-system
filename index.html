@@ -157,7 +157,7 @@
 
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-    html { scroll-behavior: smooth; }
+    html { scroll-behavior: auto; }
 
     body {
       font-family: var(--font-body);
@@ -3658,7 +3658,7 @@
 </div>
 
 <script>
-  // Sidebar scrollspy — tracks active section on scroll and on click
+  // Sidebar scrollspy — smooth scroll + active state tracking
   const sections = document.querySelectorAll('.ds-section');
   const links = document.querySelectorAll('.ds-sidebar-link');
 
@@ -3669,29 +3669,38 @@
   }
 
   function getActiveSection() {
-    const scrollY = window.scrollY + window.innerHeight * 0.25;
+    // Use getBoundingClientRect for accurate position relative to viewport
+    const offset = 120; // px from top — section is "active" once it clears this threshold
     let current = sections[0];
     sections.forEach(section => {
-      if (section.offsetTop <= scrollY) current = section;
+      const top = section.getBoundingClientRect().top;
+      if (top <= offset) current = section;
     });
     return current;
   }
 
-  // Update on scroll
+  // Smooth scroll on click — no jarring jump, no hash-triggered repaint
+  links.forEach(link => {
+    link.addEventListener('click', e => {
+      e.preventDefault();
+      const id = link.getAttribute('href').replace('#', '');
+      const target = document.getElementById(id);
+      if (target) {
+        target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        setActive(id);
+        // Update URL hash silently without triggering scroll
+        history.replaceState(null, '', `#${id}`);
+      }
+    });
+  });
+
+  // Track active section while scrolling
   window.addEventListener('scroll', () => {
     const active = getActiveSection();
     if (active) setActive(active.id);
   }, { passive: true });
 
-  // Update immediately on sidebar link click
-  links.forEach(link => {
-    link.addEventListener('click', () => {
-      const id = link.getAttribute('href').replace('#', '');
-      setActive(id);
-    });
-  });
-
-  // Set initial state
+  // Set correct active item on initial load
   const initial = getActiveSection();
   if (initial) setActive(initial.id);
 
